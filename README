@@ -1,0 +1,8 @@
+exiflib is a small library allowing to extract exif tags from TIFF metadata
+that are comonly embedded in jpeg files. It has a dependency on a subset of
+the C baselib library (slices).
+
+The main functions are read_exif and parse_exif, which take a FILE pointer and
+return a pointer to an opaque data structure exif_desc_t, and various getters
+exif_get_xxx that return tags, types and values. The exif_desc_t data is freed
+by calling exif_free after use.
