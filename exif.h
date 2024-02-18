@@ -2,6 +2,7 @@
 #ifndef __EXIF_H__
 #define  __EXIF_H__
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -606,7 +607,7 @@ typedef struct {
 
 typedef struct _exif_desc exif_desc_t;
 
-// parse_exif looks up for the EXIF header at the offset corresponding to the 
+// parse_exif looks up for the EXIF header at the offset corresponding to the
 // given start value. If an exif header is found the following file content is
 // parsed, otherwise it backs up to the beginning of the file and looks for a
 // TIFF header (which may or may not include an exif IFD) and if found it
