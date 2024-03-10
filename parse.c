@@ -317,9 +317,11 @@ static void process_embedded_ifd( ifd_desc_t *ifdd, ifd_id_t id )
 
 static void process_unknown_tag( ifd_desc_t *ifdd, ifd_id_t id )
 {
-    printf( "Unknown tag 0x%04x type %d count %d in IFD %d\n",
-            ifdd->tag, ifdd->type, ifdd->count, id );
-    exit(1);
+    if ( ! ifdd->desc->control.skip_unknown_tags ) {
+        printf( "Unknown tag 0x%04x type %d count %d in IFD %d\n",
+                ifdd->tag, ifdd->type, ifdd->count, id );
+        exit(1);
+    }
 }
 
 static void parse_tiff_tags( ifd_desc_t *ifdd, ifd_id_t id )
@@ -821,4 +823,3 @@ extern map_t *exif_parse_ifd( exif_desc_t *desc, ifd_id_t id, uint32_t *next )
     }
     return ifdd.content;
 }
-

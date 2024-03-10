@@ -601,6 +601,7 @@ typedef struct {
 } thumbnail_info_t;
 
 typedef struct {
+    bool                    skip_unknown_tags;
     bool                    warnings;
     bool                    parse_debug;
 } exif_control_t;

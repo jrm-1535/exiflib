@@ -150,7 +150,6 @@ static exif_desc_t *parse_tiff( FILE *f, exif_control_t *control )
     if ( NULL == d ) {
         return NULL;
     }
-
     d->file = f;
     d->header = ftell( f );  // keep TIFF header location
 
@@ -158,6 +157,7 @@ static exif_desc_t *parse_tiff( FILE *f, exif_control_t *control )
         free( d );
         return NULL;
     }
+    d->control = *control;
 
     uint32_t ifd_offset;    // offset relative to the  TIF header
     if ( ! check_tiff_validity( d, &ifd_offset ) ) {
@@ -208,6 +208,10 @@ extern exif_desc_t *parse_exif( FILE *f, uint32_t start,
     init_exif_bitap( );
     unsigned char bit_mask = 0xfe;
 
+    if ( NULL == control ) {
+        exif_control_t default_control = { 0 };
+        control = &default_control;
+    }
     while ( true ) {
 
         int byte = getc( f );
@@ -221,7 +225,7 @@ extern exif_desc_t *parse_exif( FILE *f, uint32_t start,
             return parse_tiff( f, control );
         }
     }
-    if ( NULL != control && control->warnings ) {
+    if ( control->warnings ) {
         printf( "Did not find EXIF header\n" );
     }
     exif_desc_t *desc = NULL;
@@ -230,7 +234,7 @@ extern exif_desc_t *parse_exif( FILE *f, uint32_t start,
         fseek( f, -2, SEEK_CUR );
         desc = parse_tiff( f, control );
     }
-    if ( NULL == desc && NULL != control && control->warnings ) {
+    if ( NULL == desc && control->warnings ) {
         printf( "Did not find TIFF header\n" );
     }
     return desc;
