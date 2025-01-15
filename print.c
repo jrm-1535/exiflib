@@ -2,7 +2,13 @@
 #include <stdio.h>
 #include "print.h"
 
-typedef void (*formated_print_fct)( uint32_t num, uint32_t den );
+// called to format each value in an array. The argument number is the number
+// of items in the array, index is the value index in the array, den is the
+// value denominator (0 if not a rational), num is the value numerator. The
+// returned boolean indicates whether a comma separator should be printed
+// between values.
+typedef bool (*formated_print_fct)( uint32_t num, uint32_t den,
+                                    uint32_t index, uint32_t number );
 
 // Note: this can be used for signed values with an appropriate format _print
 static void print_unsigned_values( vector_t *v, formated_print_fct format_print )
@@ -11,12 +17,13 @@ static void print_unsigned_values( vector_t *v, formated_print_fct format_print 
     uint32_t n_items = vector_cap( v );
 
     for ( uint32_t i = 0; i < n_items ; ++i ) {
+        bool print_comma = true;
         switch ( size ) {
         case sizeof( uint8_t ):
             {
-                uint8_t *val = vector_item_at( v, 0 );
+                uint8_t *val = vector_item_at( v, i );
                 if ( format_print ) {
-                    format_print( (uint32_t)*val, 0 );
+                    print_comma = format_print( (uint32_t)*val, 0, i, n_items );
                 } else {
                     printf( "%u", (uint32_t)*val );
                 }
@@ -24,9 +31,9 @@ static void print_unsigned_values( vector_t *v, formated_print_fct format_print 
             }
         case sizeof( uint16_t ):
             {
-                uint16_t *val = vector_item_at( v, 0 );
+                uint16_t *val = vector_item_at( v, i );
                 if ( format_print ) {
-                    format_print( (uint32_t)*val, 0 );
+                    print_comma = format_print( (uint32_t)*val, 0, i, n_items );
                 } else {
                     printf( "%u", (uint32_t)*val );
                 }
@@ -34,9 +41,9 @@ static void print_unsigned_values( vector_t *v, formated_print_fct format_print 
             }
         case sizeof( uint32_t ):
             {
-                uint32_t *val = vector_item_at( v, 0 );
+                uint32_t *val = vector_item_at( v, i );
                 if ( format_print ) {
-                    format_print( (uint32_t)*val, 0 );
+                    print_comma = format_print( (uint32_t)*val, 0, i, n_items );
                 } else {
                     printf( "%u", (uint32_t)*val );
                 }
@@ -44,11 +51,12 @@ static void print_unsigned_values( vector_t *v, formated_print_fct format_print 
             }
         case sizeof( rational_t ):
             {
-                urational_t *val = vector_item_at( v, 0 );
+                urational_t *val = vector_item_at( v, i );
                 if ( format_print ) {
-                    format_print( val->numerator, val->denominator );
+                    print_comma = format_print( val->numerator, val->denominator,
+                                                i, n_items );
                 } else if ( 0 == val->denominator ) {
-                    printf( "%u/%u", val->numerator, val->denominator );
+                    printf( "%u/0", val->numerator );
                 } else {
                     printf( "%f (%u/%u)",
                         (float)(val->numerator)/(float)(val->denominator),
@@ -57,7 +65,7 @@ static void print_unsigned_values( vector_t *v, formated_print_fct format_print 
                 break;
             }
         }
-        if ( i != n_items-1 ) {
+        if ( print_comma && i != n_items-1 ) {
             printf( ", ");
         }
     }
@@ -108,17 +116,23 @@ static void print_user_comment( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
     }
 }
 
-static void format_hex_bytes( uint32_t num, uint32_t den )
+static bool format_hex_bytes( uint32_t num, uint32_t den,
+                              uint32_t index, uint32_t number )
 {
     printf("0x%02x ", (uint8_t)num );
+    return true;
 }
 
-static void format_srational( uint32_t num, uint32_t den )
+static bool format_srational( uint32_t num, uint32_t den,
+                              uint32_t index, uint32_t number )
 {
     printf( "%f", (float)(int32_t)num / (float)(int32_t)den );
+    return true;
 }
 
-static void format_compression( uint32_t num, uint32_t den ) {
+static bool format_compression( uint32_t num, uint32_t den,
+                                uint32_t index, uint32_t number )
+{
 
     switch( num ) {
     default:                    printf("unknown (%d)", num); break;
@@ -134,9 +148,11 @@ static void format_compression( uint32_t num, uint32_t den ) {
     case RFC_2301_Color_JBIG:   printf("RFC 2301 Color JBIG"); break;
     case PACKBITS:              printf("Packbits (Apple)"); break;
     }
+    return true;
 }
 
-static void format_photographic_interpretation( uint32_t num, uint32_t den )
+static bool format_photographic_interpretation( uint32_t num, uint32_t den,
+                                                uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -150,9 +166,11 @@ static void format_photographic_interpretation( uint32_t num, uint32_t den )
     case PALETTE:
         printf( "Palette indexes\n"); break;
     }
+    return true;
 }
 
-static void format_orientation( uint32_t num, uint32_t den )
+static bool format_orientation( uint32_t num, uint32_t den,
+                                uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -174,9 +192,11 @@ static void format_orientation( uint32_t num, uint32_t den )
     case ROW_0_LEFT_COL_0_BOTTOM:
         printf( "Row 0 on left, Col 0 on bottom" ); break;
     }
+    return true;
 }
 
-static void format_resolution_uint( uint32_t num, uint32_t den )
+static bool format_resolution_uint( uint32_t num, uint32_t den,
+                                    uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -188,23 +208,29 @@ static void format_resolution_uint( uint32_t num, uint32_t den )
     case DOTS_PER_CM:
         printf("Dots per cm"); break;
     }
+    return true;
 }
 
-static void format_ycbcr_positioning( uint32_t num, uint32_t den )
+static bool format_ycbcr_positioning( uint32_t num, uint32_t den,
+                                      uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf("Unknown (%d)", num); break;
     case YCBCR_CENTERED:    printf("Centered"); break;
     case YCBCR_COSITED:     printf("Cosited"); break;
     }
+    return true;
 }
 
-static void format_exposure_time( uint32_t num, uint32_t den )
+static bool format_exposure_time( uint32_t num, uint32_t den,
+                                  uint32_t index, uint32_t number )
 {
     printf( "%f seconds (%u/%u)", (float)(num)/(float)(den), num, den );
+    return true;
 }
 
-static void format_exposure_program( uint32_t num, uint32_t den )
+static bool format_exposure_program( uint32_t num, uint32_t den,
+                                     uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Unknown (%u)", num ); break;
@@ -218,9 +244,11 @@ static void format_exposure_program( uint32_t num, uint32_t den )
     case PORTRAIT_MODE:     printf( "Portrait mode" ); break;
     case LANDSCAPE_MODE:    printf( "Landscape mode" ); break;
     }
+    return true;
 }
 
-static void format_sensitivity_type( uint32_t num, uint32_t den )
+static bool format_sensitivity_type( uint32_t num, uint32_t den,
+                                     uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                    printf( "Non-listed (%u)", num ); break;
@@ -247,9 +275,11 @@ static void format_sensitivity_type( uint32_t num, uint32_t den )
         printf( "Standard output sensitivity, Recommended exposure index, ISO speed" );
         break;
     }
+    return true;
 }
 
-static void format_metering_mode( uint32_t num, uint32_t den )
+static bool format_metering_mode( uint32_t num, uint32_t den,
+                                  uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -271,9 +301,11 @@ static void format_metering_mode( uint32_t num, uint32_t den )
     case OTHER:
         printf( "Other" ); break;
     }
+    return true;
 }
 
-static void format_ligth_source( uint32_t num, uint32_t den )
+static bool format_ligth_source( uint32_t num, uint32_t den,
+                                 uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -321,9 +353,11 @@ static void format_ligth_source( uint32_t num, uint32_t den )
     case OTHER_LIGHT_SOURCE:
         printf( "Other light source" ); break;
     }
+    return true;
 }
 
-static void format_flash( uint32_t num, uint32_t den )
+static bool format_flash( uint32_t num, uint32_t den,
+                          uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -371,27 +405,33 @@ static void format_flash( uint32_t num, uint32_t den )
     case FLASH_FIRED_AUTO_MODE_RED_EYE_REDUCTION_MODE_RETURN_LIGHT_DETECTED:
         printf("Flash fired, auto mode, red eye reduction, return light detected"); break;
     }
+    return true;
 }
 
-static void format_color_space( uint32_t num, uint32_t den )
+static bool format_color_space( uint32_t num, uint32_t den,
+                                uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:            printf("Not listed (%u)", num); break;
     case SRGB:          printf("SRGB"); break;
     case UNCALIBRATED:  printf("Uncalibrated"); break;
     }
+    return true;
 }
 
-static void format_planar_configuration( uint32_t num, uint32_t den )
+static bool format_planar_configuration( uint32_t num, uint32_t den,
+                                         uint32_t index, uint32_t number )
 {
     switch ( num ) {
     default:            printf("Not listed (%u)", num); break;
     case CHUNKY_FORMAT: printf("Chunky"); break;
     case PLANAR_FORMAT: printf("Planar"); break;
     }
+    return true;
 }
 
-static void format_resolution_unit( uint32_t num, uint32_t den )
+static bool format_resolution_unit( uint32_t num, uint32_t den,
+                                    uint32_t index, uint32_t number )
 {
     switch ( num ) {
     default:                    printf("Not listed (%u)", num); break;
@@ -401,9 +441,11 @@ static void format_resolution_unit( uint32_t num, uint32_t den )
     case RESOLUTION_UNIT_MM:    printf("Millimeter"); break;
     case RESOLUTION_UNIT_UM:    printf("Micrometer"); break;
     }
+    return true;
 }
 
-static void format_sensing_method( uint32_t num, uint32_t den )
+static bool format_sensing_method( uint32_t num, uint32_t den,
+                                   uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:
@@ -423,36 +465,44 @@ static void format_sensing_method( uint32_t num, uint32_t den )
     case COLOR_SEQUENTIAL_LINEAR_SENSOR:
         printf("Color sequential linear"); break;
     }
+    return true;
 }
 
-static void format_file_source( uint32_t num, uint32_t den )
+static bool format_file_source( uint32_t num, uint32_t den,
+                                uint32_t index, uint32_t number )
 {
     if ( num == 3 ) {
         printf( "DSC");
     } else {
         printf( "Unknown (%d)", num );
     }
+    return true;
 }
 
-static void format_scene_type( uint32_t num, uint32_t den )
+static bool format_scene_type( uint32_t num, uint32_t den,
+                               uint32_t index, uint32_t number )
 {
     if ( num == 1 ) {
         printf( "DSC");
     } else {
         printf( "Unknown (%d)", num );
     }
+    return true;
 }
 
-static void format_custom_rendered( uint32_t num, uint32_t den )
+static bool format_custom_rendered( uint32_t num, uint32_t den,
+                                    uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf("Not listed (%u)", num); break;
     case NORMAL_PROCESS:    printf("Normal process"); break;
     case CUSTOM_PROCESS:    printf("Custom process"); break;
     }
+    return true;
 }
 
-static void format_exposure_mode( uint32_t num, uint32_t den )
+static bool format_exposure_mode( uint32_t num, uint32_t den,
+                                  uint32_t index, uint32_t number  )
 {
     switch( num ) {
     default:                printf("Not listed (%u)", num); break;
@@ -460,36 +510,44 @@ static void format_exposure_mode( uint32_t num, uint32_t den )
     case MANUAL_EXPOSURE:   printf("Manual exposure"); break;
     case AUTO_BRACKET:      printf("Auto bracket"); break;
     }
+    return true;
 }
 
-static void format_white_balance( uint32_t num, uint32_t den )
+static bool format_white_balance( uint32_t num, uint32_t den,
+                                  uint32_t index, uint32_t number  )
 {
     switch( num ) {
     default:                    printf("Not listed (%u)", num); break;
     case AUTO_WHITE_BALANCE:    printf("Auto balance"); break;
     case MANUAL_WHITE_BALANCE:  printf("Manual balance"); break;
     }
+    return true;
 }
 
-static void format_digital_zoom_ratio( uint32_t num, uint32_t den )
+static bool format_digital_zoom_ratio( uint32_t num, uint32_t den,
+                                       uint32_t index, uint32_t number )
 {
     if ( num != 0 && den != 0 ) {
         printf( "%f", (float)num / (float)den );
     } else {
         printf( "No digital zoom" );
     }
+    return true;
 }
 
-static void format_35mm_focal_length( uint32_t num, uint32_t den )
+static bool format_35mm_focal_length( uint32_t num, uint32_t den,
+                                      uint32_t index, uint32_t number  )
 {
     if ( num != 0 ) {
         printf("%u", num);
     } else {
         printf("Unknown length");
     }
+    return true;
 }
 
-static void format_scene_capture_type( uint32_t num, uint32_t den )
+static bool format_scene_capture_type( uint32_t num, uint32_t den,
+                                       uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -498,9 +556,11 @@ static void format_scene_capture_type( uint32_t num, uint32_t den )
     case PORTRAIT:          printf( "Portrait" ); break;
     case NIGHT_SCENE:       printf( "Night Scene" ); break;
     }
+    return true;
 }
 
-static void format_gain_control( uint32_t num, uint32_t den )
+static bool format_gain_control( uint32_t num, uint32_t den,
+                                 uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -510,9 +570,11 @@ static void format_gain_control( uint32_t num, uint32_t den )
     case LOW_GAIN_DOWN:     printf( "Low gain down" ); break;
     case HIGH_GAIN_DOWN:    printf( "High gain down" ); break;
     }
+    return true;
 }
 
-static void format_contrast( uint32_t num, uint32_t den )
+static bool format_contrast( uint32_t num, uint32_t den,
+                             uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -520,9 +582,11 @@ static void format_contrast( uint32_t num, uint32_t den )
     case SOFT_CONTRAST:     printf( "Soft contrast" ); break;
     case HARD_CONTRAST:     printf( "Hard contrast" ); break;
     }
+    return true;
 }
 
-static void format_saturation( uint32_t num, uint32_t den )
+static bool format_saturation( uint32_t num, uint32_t den,
+                               uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -530,9 +594,11 @@ static void format_saturation( uint32_t num, uint32_t den )
     case LOW_SATURATION:    printf( "Low saturation" ); break;
     case HIGH_SATURATION:   printf( "High saturation" ); break;
     }
+    return true;
 }
 
-static void format_sharpness( uint32_t num, uint32_t den )
+static bool format_sharpness( uint32_t num, uint32_t den,
+                              uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -540,9 +606,11 @@ static void format_sharpness( uint32_t num, uint32_t den )
     case SOFT_SHARPNESS:    printf( "Low sharpness" ); break;
     case HARD_SHARNESS:     printf( "High saturation" ); break;
     }
+    return true;
 }
 
-static void format_subject_distance_range( uint32_t num, uint32_t den )
+static bool format_subject_distance_range( uint32_t num, uint32_t den,
+                                           uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                printf( "Not listed (%u)", num ); break;
@@ -551,9 +619,11 @@ static void format_subject_distance_range( uint32_t num, uint32_t den )
     case CLOSE_VIEW:        printf( "Close View" ); break;
     case DISTANT_VIEW:      printf( "Distant view" ); break;
     }
+    return true;
 }
 
-static void format_composite_image( uint32_t num, uint32_t den )
+static bool format_composite_image( uint32_t num, uint32_t den,
+                                    uint32_t index, uint32_t number )
 {
     switch( num ) {
     default:                        printf( "Not listed (%u)", num ); break;
@@ -562,6 +632,154 @@ static void format_composite_image( uint32_t num, uint32_t den )
     case GENERAL_COMPOSITE_IMAGE:   printf( "General composite image" ); break;
     case COMPOSITE_IMAGE_CAPTURED_WHEN_SHOOTING:
                                     printf( "Images captured when shooting" ); break;
+    }
+    return true;
+}
+
+static bool gps_coordinates( uint32_t num, uint32_t den,
+                             uint32_t index, uint32_t number )
+{
+    if ( 1 >= den ) {
+        printf( "%u", num );
+    } else {
+        printf( "%.2f", (float)num/(float)den );
+    }
+    switch( index ) {
+    case 0: printf( "%c%c", 0xc2, 0xb0 ); break;
+    case 1: printf( "'" ); break;
+    case 2: printf( "\"" ); break;
+    default: printf( "?" ); break;
+    }
+    return false;
+}
+
+static bool gps_altitude( uint32_t num, uint32_t den,
+                          uint32_t index, uint32_t number )
+{
+    if ( 1 >= den ) {
+        printf( "%u meters", num );
+    } else {
+        printf( "%.2f meters", (float)num/(float)den );
+    }
+    return true;
+}
+
+static bool gps_time( uint32_t num, uint32_t den,
+                      uint32_t index, uint32_t number )
+{
+    if ( 1 >= den ) {
+        printf( "%u", num );
+    } else {
+        printf( "%.2f", (float)num/(float)den );
+    }
+    switch( index ) {
+    case 0: case 1: printf(":"); break;
+    default: break;
+    }
+    return false;
+}
+
+static bool gps_angle( uint32_t num, uint32_t den,
+                       uint32_t index, uint32_t number )
+{
+    if ( 1 >= den ) {
+        printf( "%u", num );
+    } else {
+        printf( "%.2f", (float)num/(float)den );
+    }
+    printf( "%c%c", 0xc2, 0xb0 );
+    return false;
+}
+
+static void print_gps_latitude_ref( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
+                                    char *indent, char *name,
+                                    formated_print_fct format )
+{
+    vector_t *v;
+    bool success = exif_get_ifd_tag_values( desc, id, tag, &v );
+
+    if ( success ) {
+        char *ref = vector_read_string( v );
+        switch( ref[0] ) {
+            case 'N': ref = "North"; break;
+            case 'S': ref = "South"; break;
+            default: ref = "Undefined"; break;
+        }
+        printf( "%s%s: %s\n", indent, name, ref );
+    }
+}
+
+static void print_gps_longitude_ref( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
+                                    char *indent, char *name,
+                                    formated_print_fct format )
+{
+    vector_t *v;
+    bool success = exif_get_ifd_tag_values( desc, id, tag, &v );
+
+    if ( success ) {
+        char *ref = vector_read_string( v );
+        switch( ref[0] ) {
+            case 'E': ref = "East"; break;
+            case 'W': ref = "West"; break;
+            default: ref = "Undefined"; break;
+        }
+        printf( "%s%s: %s\n", indent, name, ref );
+    }
+}
+
+static void print_gps_altitude_ref( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
+                                    char *indent, char *name,
+                                    formated_print_fct format )
+{
+    vector_t *v;
+    bool success = exif_get_ifd_tag_values( desc, id, tag, &v );
+
+    if ( success ) {
+        char *ref;
+        uint8_t r = *(uint8_t *)vector_item_at( v, 0 );
+        switch( r ) {
+            case 0: ref = "Above sea level"; break;
+            case 1: ref = "Below sea level"; break;
+            default: ref = "Undefined"; break;
+        }
+        printf( "%s%s: %s\n", indent, name, ref );
+    }
+}
+
+static void print_gps_direction_ref( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
+                                     char *indent, char *name,
+                                     formated_print_fct format )
+{
+    vector_t *v;
+    bool success = exif_get_ifd_tag_values( desc, id, tag, &v );
+
+    if ( success ) {
+        char *ref = vector_read_string( v );
+        switch( ref[0] ) {
+            case 'T': ref = "True direction"; break;
+            case 'M': ref = "Magnetic direction"; break;
+            default: ref = "Undefined"; break;
+        }
+        printf( "%s%s: %s\n", indent, name, ref );
+    }
+}
+
+static void print_gps_yes_no( exif_desc_t *desc, ifd_id_t id, uint16_t tag,
+                              char *indent, char *name,
+                              formated_print_fct format )
+{
+    vector_t *v;
+    bool success = exif_get_ifd_tag_values( desc, id, tag, &v );
+
+    if ( success ) {
+        uint8_t code = *(uint8_t *)vector_item_at( v, 0 );
+        char *res;
+        switch( code ) {
+            case 0: res = "No"; break;
+            case 1: res = "Yes"; break;
+            default: res = "Undefined"; break;
+        }
+        printf( "%s%s: %s\n", indent, name, res );
     }
 }
 
@@ -797,24 +1015,37 @@ static ifd_tag_print_t ifd_2_tag_print[] = {
 static ifd_tag_print_t ifd_3_tag_print[] = {
 
     { GPS_VERSION_ID_TAG, "GPS version", print_uint_tag_array, NULL },
-    { GPS_LATITUDE_REF_TAG, "GPS Latitude reference", print_string_tag, NULL },
-    { GPS_LATITUDE_TAG, "GPS latitude", print_uint_tag_array, NULL },
-    { GPS_LONGITUDE_REF_TAG, "GPS Longitude reference", print_string_tag, NULL },
-    { GPS_LONGITUDE_TAG, "GPS Longitude", print_uint_tag_array, NULL },
-    { GPS_ALTITUDE_REF_TAG, "GPS Altitude reference", print_string_tag, NULL },
-    { GPS_ALTITUDE_TAG, "GPS Altitude", print_uint_tag_array, NULL },
-    { GPS_TIME_STAMP_TAG, "GPS time", print_uint_tag_array, NULL },
+    { GPS_LATITUDE_REF_TAG, "GPS Latitude reference", print_gps_latitude_ref, NULL },
+    { GPS_LATITUDE_TAG, "GPS Latitude", print_uint_tag_array, gps_coordinates },
+    { GPS_LONGITUDE_REF_TAG, "GPS Longitude reference", print_gps_longitude_ref, NULL },
+    { GPS_LONGITUDE_TAG, "GPS Longitude", print_uint_tag_array, gps_coordinates },
+    { GPS_ALTITUDE_REF_TAG, "GPS Altitude reference", print_gps_altitude_ref, NULL },
+    { GPS_ALTITUDE_TAG, "GPS Altitude", print_uint_tag_array, gps_altitude },
+    { GPS_TIME_STAMP_TAG, "GPS time", print_uint_tag_array, gps_time },
     { GPS_SATELLITES_TAG, "GPS Satellites", print_string_tag, NULL },
     { GPS_STATUS_TAG, "GPS Status", print_string_tag, NULL },
     { GPS_MEASURE_MODE_TAG, "GPS Measure mode", print_string_tag, NULL },
     { GPS_DOP_TAG, "GPS DOP", print_uint_tag_array, NULL },
     { GPS_SPEED_REF_TAG, "GPS Speed reference", print_string_tag, NULL },
     { GPS_SPEED_TAG, "GPS Speed", print_uint_tag_array, NULL },
-    { GPS_TRACK_REF_TAG, "GPS version", print_string_tag, NULL },
-    { GPS_TRACK_TAG, "GPS version", print_uint_tag_array, NULL },
-    { GPS_IMG_DIRECTION_REF_TAG, "GPS version", print_string_tag, NULL },
-    { GPS_IMG_DIRECTION_TAG, "GPS version", print_uint_tag_array, NULL },
+    { GPS_TRACK_REF_TAG, "GPS Track reference", print_gps_direction_ref, NULL },
+    { GPS_TRACK_TAG, "GPS Track", print_uint_tag_array, NULL },
+    { GPS_IMG_DIRECTION_REF_TAG, "GPS Image direction reference", print_gps_direction_ref, NULL },
+    { GPS_IMG_DIRECTION_TAG, "GPS Image direction", print_uint_tag_array, gps_angle },
 
+    { GPS_MAP_DATUM_TAG, "GPS Map Datum", print_string_tag, NULL },
+    { GPS_DEST_LATITUDE_REF_TAG, "GPS Destination latitude reference", print_gps_latitude_ref, NULL },
+    { GPS_DEST_LATITUDE_TAG, "GPS Destination latitude", print_uint_tag_array, gps_coordinates },
+    { GPS_DEST_LONGITUDE_REF_TAG, "GPS Destination longitude reference", print_gps_longitude_ref, NULL },
+    { GPS_DEST_LONGITUDE_TAG, "GPS Destination longitude", print_uint_tag_array, gps_coordinates },
+
+    { GPS_DEST_BEARING_REF_TAG, "GPS Destination bearing reference", print_gps_direction_ref, NULL },
+    { GPS_DEST_BEARING_TAG, "GPS Destination bearing", print_uint_tag_array, NULL },
+    { GPS_PROCESSING_METHOD_TAG, "GPS Processing method", print_user_comment, NULL },
+    { GPS_AREA_INFORMATION_TAG, "GPS Area information", print_user_comment, NULL },
+    { GPS_DATE_STAMP_TAG, "GPS UTC Date stamp", print_string_tag, NULL },
+    { GPS_DIFFERENTIAL_TAG, "GPS Differential applied", print_gps_yes_no, NULL },
+    { GPS_H_POSITIONING_ERROR_TAG, "GPS Positioning error", print_uint_tag_array, NULL },
 };
 
 extern void print_ifd_tags( exif_desc_t *desc, ifd_id_t id, slice_t *tags,
@@ -864,4 +1095,3 @@ extern void print_ifd_tags( exif_desc_t *desc, ifd_id_t id, slice_t *tags,
         }
     }
 }
-

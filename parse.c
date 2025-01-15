@@ -184,7 +184,7 @@ static void add_tag_int_values( ifd_desc_t *ifdd )
     }
 }
 
-// signed and unsigned rationals are treated the same way her. It is just
+// signed and unsigned rationals are treated the same way here. It is just
 // a matter of interpreting what has been stored here.
 static void add_tag_rational_values( ifd_desc_t *ifdd )
 {
@@ -668,78 +668,102 @@ static void parse_gps_tags( ifd_desc_t *ifdd )
     case GPS_VERSION_ID_TAG:
         process_version_string( ifdd );
         break;
-
     case GPS_LATITUDE_REF_TAG:              // "N\0" or "S\0"
         process_ascii_string( ifdd );
         break;
     case GPS_LATITUDE_TAG:
-        process_n_rationals( ifdd, 3 );
+        process_n_urationals( ifdd, 3 );
         break;
     case GPS_LONGITUDE_REF_TAG:             // "E\0" or "W\0"
         process_ascii_string( ifdd );
         break;
     case GPS_LONGITUDE_TAG:
-        process_n_rationals( ifdd, 3 );
+        process_n_urationals( ifdd, 3 );
         break;
     case GPS_ALTITUDE_REF_TAG:              // 0 = above sea level, 1 = below sea level
         process_n_unsigned_bytes( ifdd, 1 );
         break;
     case GPS_ALTITUDE_TAG:                  // altitude in meters
-        process_n_rationals( ifdd, 1 );
+        process_n_urationals( ifdd, 1 );
         break;
     case GPS_TIME_STAMP_TAG:                // UTC time, hh, mm, ss (atomic time)
-        process_n_rationals( ifdd, 3 );
+        process_n_urationals( ifdd, 3 );
         break;
     case GPS_SATELLITES_TAG:                // whatever the device can indicate
         process_ascii_string( ifdd );
         break;
-    case GPS_STATUS_TAG:                    // "A\0" (measurement) or "V\0" (done)
+    case GPS_STATUS_TAG:                    // "A\0" (measurement active) or "V\0" (void)
         process_ascii_string( ifdd );
         break;
-    case GPS_MEASURE_MODE_TAG:              // "2\0" or "3\0""
+    case GPS_MEASURE_MODE_TAG:              // GPS dimension measurement "2\0" or "3\0""
         process_ascii_string( ifdd );
         break;
-    case GPS_DOP_TAG:
-        process_n_rationals( ifdd, 1 );
+    case GPS_DOP_TAG:                       // GPS degree of precision value
+        process_n_urationals( ifdd, 1 );
         break;
     case GPS_SPEED_REF_TAG:                 // "K\0" (km/h), "M\0" (Miles/h) or "N\0" (Knots/h)
         process_ascii_string( ifdd );
         break;
-    case GPS_SPEED_TAG:
-        process_n_rationals( ifdd, 1 );
+    case GPS_SPEED_TAG:                     // GPS reciever speed value
+        process_n_urationals( ifdd, 1 );
         break;
     case GPS_TRACK_REF_TAG:                 // "T\0" (true North) or "M\0" (magnetic)
         process_ascii_string( ifdd );
         break;
-    case GPS_TRACK_TAG:
-        process_n_rationals( ifdd, 1 );
+    case GPS_TRACK_TAG:                     // Track direction
+        process_n_urationals( ifdd, 1 );
         break;
     case GPS_IMG_DIRECTION_REF_TAG:         // "T\0" (true North) or "M\0" (magnetic)
         process_ascii_string( ifdd );
         break;
-    case GPS_IMG_DIRECTION_TAG:
-        process_n_rationals( ifdd, 1 );
+    case GPS_IMG_DIRECTION_TAG:             // Image direction
+        process_n_urationals( ifdd, 1 );
         break;
 
-// TODO
-    case GPS_MAP_DATUM_TAG:
-    case GPS_DEST_LATITUDE_REF_TAG:
-    case GPS_DEST_LATITUDE_TAG:
-    case GPS_DEST_LONGITUDE_REF_TAG:
-    case GPS_DEST_LONGITUDE_TAG:
-    case GPS_DEST_BEARING_REF_TAG:
-    case GPS_DEST_BEARING_TAG:
-    case GPS_DEST_DISTANCE_REF_TAG:
-    case GPS_DEST_DISTANCE_TAG:
-    case GPS_PROCESSING_METHOD_TAG:
-    case GPS_AREA_INFORMATION_TAG:
-    case GPS_DATE_STAMP_TAG:
-    case GPS_DIFFERENTIAL_TAG:
-    case GPS_H_POSITIONING_ERROR_TAG:
+    case GPS_MAP_DATUM_TAG:                 // string e.g. 'TOKYO' or 'WGS-84'.
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DEST_LATITUDE_REF_TAG:         // Destination point latitude region "N\0" or "S\0"
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DEST_LATITUDE_TAG:             // Destination point latitude
+        process_n_urationals( ifdd, 3 );
+        break;
+    case GPS_DEST_LONGITUDE_REF_TAG:        // Destination point longitude region "E\0" or "W\0"
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DEST_LONGITUDE_TAG:            // Destination point longitude
+        process_n_urationals( ifdd, 3 );
         break;
 
-    case PADDING_TAG:
-        break;              // just ignore
+    case GPS_DEST_BEARING_REF_TAG:          // "T\0" (true North) or "M\0" (magnetic)
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DEST_BEARING_TAG:              // Destination point angle
+        process_n_urationals( ifdd, 1 );
+        break;
+    case GPS_DEST_DISTANCE_REF_TAG:         // "K\0" (km), "M\0" (Miles) or "N\0" (Knots)
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DEST_DISTANCE_TAG:             // Destination point distance
+        process_n_urationals( ifdd, 1 );
+        break;
+    case GPS_PROCESSING_METHOD_TAG:         // byte array: character code followed by method name  (not 0 terminated)
+        process_n_unsigned_bytes( ifdd, 0 );    // names are "GPS", "CELLID", "WLAN" or "MANUAL"
+        break;
+    case GPS_AREA_INFORMATION_TAG:          // byte array: character code followed by name  (not 0 terminated)
+        process_n_unsigned_bytes( ifdd, 0 );
+        break;
+    case GPS_DATE_STAMP_TAG:                // UTC date & Time as ASCII string YYYY:MM:DD\0
+        process_ascii_string( ifdd );
+        break;
+    case GPS_DIFFERENTIAL_TAG:              // Differential correction applied: 0 no, 1 yes
+        process_n_unsigned_shorts( ifdd, 1 );
+        break;
+
+    case GPS_H_POSITIONING_ERROR_TAG:       // Max error distance in meters?
+        process_n_urationals( ifdd, 1 );
+        break;
 
     default:
         process_unknown_tag( ifdd, GPS );

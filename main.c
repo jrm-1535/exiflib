@@ -1,8 +1,11 @@
 
-
 #include <stdio.h>
 #include "exif.h"
 
+// list IFD tags before printing their values
+#define LIST_IFD_TAGS 0
+
+#if LIST_IFD_TAGS
 static char *get_ifd_name( ifd_id_t id )
 {
     switch ( id ) {
@@ -39,7 +42,7 @@ static void print_ifd_keys( exif_desc_t *desc, ifd_id_t id )
         slice_free( tags );
     }
 }
-
+#endif
 int main( int argc, char **argv )
 {
     if ( argc < 2 ) {
@@ -52,19 +55,23 @@ int main( int argc, char **argv )
         printf("Failed to read exif content\n" );
         return 2;
     }
-
+#if LIST_IFD_TAGS
     print_ifd_keys( desc, PRIMARY );
     print_ifd_keys( desc, THUMBNAIL );
     print_ifd_keys( desc, EXIF );
-
+    print_ifd_keys( desc, GPS );
+#endif
     printf( "\nPrimary Metadata:\n");
     exif_print_ifd_entries( desc, PRIMARY, "  " );
 
-    printf( " \nThumbnail Metadata:\n");
+    printf( "\nThumbnail Metadata:\n");
     exif_print_ifd_entries( desc, THUMBNAIL, "  " );
 
-    printf( " \nExif Metadata:\n");
+    printf( "\nExif Metadata:\n");
     exif_print_ifd_entries( desc, EXIF, "  " );
+
+    printf( "\nGPS Metadata:\n");
+    exif_print_ifd_entries( desc, GPS, "  " );
 
     exif_free( desc );
     return 0;
