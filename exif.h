@@ -537,38 +537,57 @@ typedef enum {
 // When a F number is not known its notation is 0/0
 
 typedef enum {                              // GPS IFD specific tags
-    GPS_VERSION_ID_TAG          = 0x00,         // GPS, 4-byte version number
-    GPS_LATITUDE_REF_TAG        = 0x01,
-    GPS_LATITUDE_TAG            = 0x02,
-    GPS_LONGITUDE_REF_TAG       = 0x03,
-    GPS_LONGITUDE_TAG           = 0x04,
-    GPS_ALTITUDE_REF_TAG        = 0x05,
-    GPS_ALTITUDE_TAG            = 0x06,
-    GPS_TIME_STAMP_TAG          = 0x07,
-    GPS_SATELLITES_TAG          = 0x08,
-    GPS_STATUS_TAG              = 0x09,
-    GPS_MEASURE_MODE_TAG        = 0x0a,
-    GPS_DOP_TAG                 = 0x0b,
-    GPS_SPEED_REF_TAG           = 0x0c,
-    GPS_SPEED_TAG               = 0x0d,
-    GPS_TRACK_REF_TAG           = 0x0e,
-    GPS_TRACK_TAG               = 0x0f,
-    GPS_IMG_DIRECTION_REF_TAG   = 0x10,
-    GPS_IMG_DIRECTION_TAG       = 0x11,
-    GPS_MAP_DATUM_TAG           = 0x12,
-    GPS_DEST_LATITUDE_REF_TAG   = 0x13,
-    GPS_DEST_LATITUDE_TAG       = 0x14,
-    GPS_DEST_LONGITUDE_REF_TAG  = 0x15,
-    GPS_DEST_LONGITUDE_TAG      = 0x16,
-    GPS_DEST_BEARING_REF_TAG    = 0x17,
-    GPS_DEST_BEARING_TAG        = 0x18,
-    GPS_DEST_DISTANCE_REF_TAG   = 0x19,
-    GPS_DEST_DISTANCE_TAG       = 0x1a,
-    GPS_PROCESSING_METHOD_TAG   = 0x1b,
-    GPS_AREA_INFORMATION_TAG    = 0x1c,
-    GPS_DATE_STAMP_TAG          = 0x1d,
-    GPS_DIFFERENTIAL_TAG        = 0x1e,
-    GPS_H_POSITIONING_ERROR_TAG = 0x1f
+    GPS_VERSION_ID_TAG          = 0x00,     // GPS, 4-byte version number
+    GPS_LATITUDE_REF_TAG        = 0x01,     // ASCII "N\0" or "S\0"
+    GPS_LATITUDE_TAG            = 0x02,     // 3 rationals: deg, min, sec
+                                            //  0.0 is equator, n.nn angle
+                                            // from equator [0.0-90.0]
+    GPS_LONGITUDE_REF_TAG       = 0x03,     // ASCII "E\0" or "W\0"
+    GPS_LONGITUDE_TAG           = 0x04,     // 3 rational: deg, min, sec
+                                            // 0.0 is the International
+                                            // Reference Meridian (~Greenwich),
+                                            // n.nn angle from it [0.0-180.0]]
+    GPS_ALTITUDE_REF_TAG        = 0x05,     // uint8_t 0 above, 1 below sea
+    GPS_ALTITUDE_TAG            = 0x06,     // 1 rationsl: altitude in meters
+    GPS_TIME_STAMP_TAG          = 0x07,     // 3 rationals: atimic time
+                                            // UTC time hh, mm, ss[.xx]]
+    GPS_SATELLITES_TAG          = 0x08,     // ASCII whetever devide returns
+    GPS_STATUS_TAG              = 0x09,     // ASCI "A\0" (active) or "V\0" (void)
+    GPS_MEASURE_MODE_TAG        = 0x0a,     // ASCII GPS dimension measure
+                                            // either "2.0" or "3.0"
+    GPS_DOP_TAG                 = 0x0b,     // 1 rational: degree of precision
+    GPS_SPEED_REF_TAG           = 0x0c,     // ASCII: speed value unity
+                                            // "K\0 (km/h), "M\0" (Miles/h) or
+                                            // "K\0" (knots/h)
+    GPS_SPEED_TAG               = 0x0d,     // 1 rational: speed value
+    GPS_TRACK_REF_TAG           = 0x0e,     // ASCII: "T\0 (true north)" or
+                                            // "M\0" (magnetic north)
+    GPS_TRACK_TAG               = 0x0f,     // 1 rational: track direction value
+    GPS_IMG_DIRECTION_REF_TAG   = 0x10,     // ASCII: "T\0 (true north)" or
+                                            // "M\0" (magnetic north)
+    GPS_IMG_DIRECTION_TAG       = 0x11,     // 1 rational: img direction value
+    GPS_MAP_DATUM_TAG           = 0x12,     // ASCII string e.g. 'TOKYO' or 'WGS-84'.
+    GPS_DEST_LATITUDE_REF_TAG   = 0x13,     // ASCII Destination point latitude
+                                            // region "N\0" or "S\0"
+    GPS_DEST_LATITUDE_TAG       = 0x14,     // 3 rationals: destination latitude
+    GPS_DEST_LONGITUDE_REF_TAG  = 0x15,     // ASCII Destination point longitude
+                                            // region "E\0" or "W\0"
+    GPS_DEST_LONGITUDE_TAG      = 0x16,     // 3 rationals: destination longitude
+    GPS_DEST_BEARING_REF_TAG    = 0x17,     // ASCII: "T\0 (true north)" or
+                                            // "M\0" (magnetic north)
+    GPS_DEST_BEARING_TAG        = 0x18,     // 1 rational: destination point angle
+    GPS_DEST_DISTANCE_REF_TAG   = 0x19,     // ASCIIL: distance value unity
+                                            // "K\0 (km), "M\0" (Miles) or
+                                            // "K\0" (knots)
+    GPS_DEST_DISTANCE_TAG       = 0x1a,     // 1 rational: Destination point distance
+    GPS_PROCESSING_METHOD_TAG   = 0x1b,     // byte array: character code followed
+                                            // by method name  (not 0 terminated)
+                                            // names are "GPS", "CELLID", "WLAN" or "MANUAL"
+    GPS_AREA_INFORMATION_TAG    = 0x1c,     // byte array: character code followed
+                                            // by name  (not 0 terminated)
+    GPS_DATE_STAMP_TAG          = 0x1d,     // ASCII: UTC date YYYY:MM:DD\0
+    GPS_DIFFERENTIAL_TAG        = 0x1e,     // Differential correction applied: 0 no, 1 yes
+    GPS_H_POSITIONING_ERROR_TAG = 0x1f      // Max error distance in meters?
 
 } gps_ifd_tag_t;
 
