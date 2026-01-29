@@ -22,7 +22,7 @@ static uint32_t tiff_type_size[] = { /* unused */           0,
                                      /* TIFF_UINT32 */      LONG_SIZE,
                                      /* TIFF_URATIONAL */   RATIONAL_SIZE,
                                      /* TIFF_INT8 */        BYTE_SIZE,
-                                     /* TIFF_UNDEFINED */   0,
+                                     /* TIFF_UNDEFINED */   BYTE_SIZE,
                                      /* TIFF_INT16 */       SHORT_SIZE,
                                      /* TIFF_INT32 */       LONG_SIZE,
                                      /* TIFF_RATIONAL */    RATIONAL_SIZE,
@@ -94,6 +94,10 @@ static inline void move_file_position_to_offset( ifd_desc_t *ifdd )
 
 static inline void restore_file_position( ifd_desc_t *ifdd )
 {
+    uint32_t pos = ftell( ifdd->desc->file );
+    if ( pos > ifdd->desc->max_offset ) {
+        ifdd->desc->max_offset = pos;
+    }
     fseek( ifdd->desc->file, ifdd->saved_pos, SEEK_SET );
 }
 
@@ -838,6 +842,10 @@ extern map_t *exif_parse_ifd( exif_desc_t *desc, ifd_id_t id, uint32_t *next )
             return NULL;
         }
         parse_tag( &ifdd );
+        off_t pos = ftell( desc->file );
+        if ( pos > desc->max_offset ) {
+            desc->max_offset = pos;
+        }
     }
 
     uint32_t next_offset = tiff_get_uint32( desc);

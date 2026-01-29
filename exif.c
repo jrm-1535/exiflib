@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <errno.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -106,24 +106,20 @@ extern uint16_t tiff_endianize_uint16( exif_desc_t *d, uint16_t raw )
 // big_endian value by side effect and returns true if the endianess is
 // either big endian or little endian, or false otherwise. Any multi-byte
 // value following this point must take in account the TIFF endianess.
-static bool check_tiff_endianess( FILE *f, bool *is_big_endian )
+static bool check_tiff_endianess( exif_desc_t *d )
 {
     // TIFF header starts with 2 bytes indicating the byte ordering ("II" short
     // for Intel or "MM" short for Motorola, indicating little or big endian
     // respectively)
 
     unsigned char data[4];
-    fread( data, 1, 2, f );
+    fread( data, 1, 2, d->file );
     if ( data[0] == 'I' && data[1] == 'I' ) {
-        if ( NULL != is_big_endian ) {
-            *is_big_endian = false;
-        }
+        d->big_endian = false;
         return true;
     }
     if ( data[0] == 'M' && data[1] == 'M' ) {
-        if ( NULL != is_big_endian ) {
-            *is_big_endian = true;
-        }
+        d->big_endian = true;
         return true;
     }
     return false;
@@ -152,8 +148,10 @@ static exif_desc_t *parse_tiff( FILE *f, exif_control_t *control )
     }
     d->file = f;
     d->header = ftell( f );  // keep TIFF header location
+    d->max_offset = 0;
 
-    if ( ! check_tiff_endianess( f, &(d->big_endian) ) ) {
+    if ( ! check_tiff_endianess( d ) ) {
+        fseek( f, d->header, SEEK_SET );
         free( d );
         return NULL;
     }
@@ -161,12 +159,14 @@ static exif_desc_t *parse_tiff( FILE *f, exif_control_t *control )
 
     uint32_t ifd_offset;    // offset relative to the  TIF header
     if ( ! check_tiff_validity( d, &ifd_offset ) ) {
+        fseek( f, d->header, SEEK_SET );
         free( d );
         return NULL;
     }
     fseek( f, d->header + ifd_offset, SEEK_SET );
     map_t *ifd_map = exif_parse_ifd( d, PRIMARY, &ifd_offset );
     if ( NULL == ifd_map ) {
+        fseek( f, d->header, SEEK_SET );
         free( d );
         return NULL;
     }
@@ -175,6 +175,7 @@ static exif_desc_t *parse_tiff( FILE *f, exif_control_t *control )
         fseek( f, d->header + ifd_offset, SEEK_SET );
         map_t *ifd_map = exif_parse_ifd( d, THUMBNAIL, NULL );
         if ( NULL == ifd_map ) {
+            fseek( f, d->header, SEEK_SET );
             free( d );
             return NULL;
         }
@@ -222,20 +223,24 @@ extern exif_desc_t *parse_exif( FILE *f, uint32_t start,
         bit_mask |= masks[byte];
         bit_mask <<= 1;
         if ( 0 == ( bit_mask & 64 ) ) {
-            return parse_tiff( f, control );
+            // found "Exif\0\0" in file
+            exif_desc_t *ed = parse_tiff( f, control );
+            if ( NULL != ed ) {
+                ed->header -= 6;    // prepend the Exif header
+                return ed;
+            }
         }
     }
     if ( control->warnings ) {
         printf( "Did not find EXIF header\n" );
     }
-    exif_desc_t *desc = NULL;
     fseek( f, (long)start, SEEK_SET );
-    if ( check_tiff_endianess( f, NULL ) ) {
-        fseek( f, -2, SEEK_CUR );
-        desc = parse_tiff( f, control );
-    }
-    if ( NULL == desc && control->warnings ) {
-        printf( "Did not find TIFF header\n" );
+    exif_desc_t *desc = parse_tiff( f, control );
+    if ( NULL == desc ) {
+        if ( control->warnings ) {
+            printf( "Did not find TIFF header\n" );
+        }
+        return NULL;
     }
     return desc;
 }
@@ -245,8 +250,13 @@ extern exif_desc_t *read_exif( char *path, uint32_t start,
 {
     if ( NULL == path ) return NULL;
 
+    errno = 0;
     FILE *f = fopen( path, "r" );
     if ( NULL == f ) {
+        if ( NULL != control && control->warnings ) {
+            printf( "read_exif: unable to open %s (%s)\n",
+                    path, strerror(errno) );
+        }
         return NULL;
     }
 
@@ -254,6 +264,17 @@ extern exif_desc_t *read_exif( char *path, uint32_t start,
 
     fclose( f );
     return desc;
+}
+
+extern off_t exif_get_segment( exif_desc_t *desc, size_t *plen )
+{
+    if ( NULL == desc ) {
+        return -1;
+    }
+    if ( NULL != plen ) {
+        *plen = desc->max_offset - desc->header;
+    }
+    return desc->header;
 }
 
 extern slice_t *exif_get_ifd_ids( exif_desc_t *desc )

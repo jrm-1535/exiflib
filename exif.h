@@ -634,7 +634,8 @@ typedef struct _exif_desc exif_desc_t;
 // starts parsing the following file content. If no EXIF or TIFF header was
 // found it returns a NULL pointer, otherwise it returns a non-NULL exif
 // descriptor pointer that can be used to get the content of all IFDs that
-// have been sucessfully parsed,
+// have been sucessfully parsed. After use the exif descriptor must be freed
+// by calling exif_free().
 //
 // It implements the bitap (or shift-Or) algorithm to quickly find the exif
 // header. Exif header is 6-byte long ("Exif\x0\x0") and requires only a 6-bit
@@ -646,9 +647,15 @@ extern exif_desc_t *parse_exif( FILE *f, uint32_t start,
 // read_exif opens the file associated with the given path and calls parse_exif.
 // If no EXIF or TIFF header was found it returns a NULL pointer, otherwise it
 // returns a non-NULL exif descriptor pointer that can be used to get the
-// content of all IFDs that have been sucessfully parsed,
+// content of all IFDs that have been sucessfully parsed. After use the exif
+// descriptor must be freed by calling exif_free().
 extern exif_desc_t *read_exif( char *path, uint32_t start,
                                exif_control_t *control );
+
+// return the file offset of the exif segment in file, and writes the segment
+// length in bytes in the size_t value pointed to by plen. It returns -1 in
+// case of error (NULL descriptor).
+extern off_t exif_get_segment( exif_desc_t *desc, size_t *plen );
 
 // exif_get_ifd_ids returns the slice of available IFD Ids from the given exif
 // descriptor, or NULL in case of failure. IFD ids are returned as type ifd_id_t

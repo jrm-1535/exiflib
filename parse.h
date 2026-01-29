@@ -195,14 +195,14 @@ typedef struct {
 // exif descriptor with all required IFD metadata
 struct _exif_desc {
     FILE                *file;
-    long                header;
-    bool                big_endian;
-    exif_control_t      control;        // what to do when parsing
+    long                header;     // TIFF header file position
+    long                max_offset; // max file position
+    bool                big_endian; // multi-byte value byte order
+    exif_control_t      control;    // what to do when parsing
 
     uint32_t            thumb_offset;
     uint32_t            thumb_size;
 
-//    map_t               *global;        // map for global information ?
     map_t               *ifds[_IFD_N];  // flat ifd content access by id
 
 };
