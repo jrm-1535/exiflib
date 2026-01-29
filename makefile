@@ -14,7 +14,7 @@ CC := gcc $(GDEFS)
 all:    exiflib.a xexif showexif
 
 clean:
-	   rm *.o exiflib.a
+	   rm *.o exiflib.a xexif showexif
 
 exiflib.a:  exif.o parse.o print.o $(LIBS)
 	   /usr/bin/ar csr $@ $^
