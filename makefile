@@ -11,7 +11,7 @@ CFLAGS := -Wall -std=c99 -pedantic $(OPTIMIZE) $(PROFILE) $(DEBUG) $(DIRS)
 DEP := ../baselib/baselib.a
 CC := gcc $(GDEFS)
 
-all:    exiflib.a xexif tst
+all:    exiflib.a xexif showexif
 
 clean:
 	   rm *.o exiflib.a
@@ -19,7 +19,7 @@ clean:
 exiflib.a:  exif.o parse.o print.o $(LIBS)
 	   /usr/bin/ar csr $@ $^
 
-tst:   main.o exiflib.a $(LIBS)
+showexif:   showexif.o exiflib.a $(LIBS)
 	   $(CC) $(CFLAGS) -o $@ $^
 
 xexif: xexif.o exiflib.a $(LIBS)
@@ -31,6 +31,6 @@ parse.o:    parse.c exif.h parse.h
 
 print.o:    print.c exif.h print.h
 
-main.o: main.c exif.h
+showexif.o: showexif.c exif.h
 
 xexif.o: xexif.c exif.h
