@@ -5,4 +5,12 @@ the C baselib library (slices).
 The main functions are read_exif and parse_exif, which take a FILE pointer and
 return a pointer to an opaque data structure exif_desc_t, and various getters
 exif_get_xxx that return tags, types and values. The exif_desc_t data is freed
-by calling exif_free after use.
+by calling exif_free after use. The library can be used to provide access to
+exif metadata as needed.
+
+Three small utilities are provided:
+  xexif     extract exif metadata from a file, and write it into a new file
+  injexif   insert exif metadata found in a file into an existing JPEG file
+            (JFIF) as an APP1 segment.
+  prexif    search for exif metsdata ina file and print out the IFDs on stdout.
+
